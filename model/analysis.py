@@ -2,7 +2,10 @@ import sys
 import json
 from transformers import pipeline
 
-sentiment_analysis = pipeline("sentiment-analysis")
+# Use a more advanced pre-trained model for sentiment analysis
+sentiment_analysis = pipeline(
+    "sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english"
+)
 
 
 def analyze_sentiment(text):
