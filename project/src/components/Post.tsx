@@ -6,19 +6,20 @@ import { PostComments } from './PostComments';
 import { Hashtags } from './Hashtags';
 import { SentimentSlider } from './SentimentSlider';
 import { SentimentLabels } from './SentimentLabels';
-import { getSentimentLabels } from '../types/sentiment';
+import { getSentimentLabels } from '../utils/sentiment';
 
 interface PostProps {
   post: PostType;
+  onNewComment: (postId: string, comment: any) => void;
 }
 
-export function Post({ post }: PostProps) {
+export function Post({ post, onNewComment }: PostProps) {
   const [isLiked, setIsLiked] = useState(false);
   const [showComments, setShowComments] = useState(true); // Show comments by default
   const [imageError, setImageError] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState(post.comments || []);
-  const sentimentLabels = getSentimentLabels(post.sentimentScore);
+  const [sentimentLabels, setSentimentLabels] = useState(getSentimentLabels(post.sentimentScore));
 
   const handleAddComment = async () => {
     try {
@@ -38,14 +39,16 @@ export function Post({ post }: PostProps) {
       const data = await response.json();
 
       if (data.success) {
-        // Update the post's comments state
-        setComments([...comments, {
+        const newComment = {
           id: data.commentId,
           username: 'currentUsername', // Replace with the actual username
           text: commentText,
           timestamp: new Date().toISOString(),
-        }]);
+        };
+        setComments([...comments, newComment]);
+        onNewComment(post.post_id, newComment);
         setCommentText('');
+        setSentimentLabels(getSentimentLabels(data.sentimentScore));
       } else {
         console.error('Failed to add comment:', data.error);
       }

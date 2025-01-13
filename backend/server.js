@@ -3,10 +3,34 @@ import mysql from 'mysql2/promise';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { exec } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = 3000;
 const JWT_SECRET = 'your-secret-key';
+
+const analyzeSentiment = (text) => {
+  return new Promise((resolve, reject) => {
+    const scriptPath = path.join(__dirname, '../model/analysis.py');
+    const venvActivatePath = 'D:/Development/DBMS_EL/venv/Scripts/activate.bat';
+    const command = `cmd /c "call ${venvActivatePath} && python ${scriptPath} \\"${text}\\""`;
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error('Sentiment analysis error:', error);
+        reject(error);
+      } else {
+        console.log('Sentiment analysis result:', stdout);
+        resolve(JSON.parse(stdout));
+      }
+    });
+  });
+};
 
 const pool = mysql.createPool({
   host: 'localhost',
@@ -25,15 +49,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// Add this endpoint to fetch posts
 app.get('/api/posts', async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
     const [posts] = await connection.query(`
-      SELECT p.post_id, p.content AS caption, p.image_url AS imageUrl, u.username, u.name, u.email
+      SELECT p.post_id, p.content AS caption, p.image_url AS imageUrl, u.username, u.name, u.email, sa.scale AS sentimentScore, sa.label AS sentimentLabel
       FROM Post p
       JOIN User u ON p.p_user_id = u.user_id
+      LEFT JOIN sentiment_analysis sa ON p.post_id = sa.post_id
       ORDER BY p.created_at DESC
     `);
 
@@ -66,7 +90,6 @@ app.get('/api/posts', async (req, res) => {
   }
 });
 
-// Login endpoint
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   const connection = await pool.getConnection();
@@ -125,7 +148,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Signup endpoint
 app.post('/api/auth/signup', async (req, res) => {
   const { email, password, name, username, dob } = req.body;
   const connection = await pool.getConnection();
@@ -179,7 +201,6 @@ app.post('/api/auth/signup', async (req, res) => {
   }
 });
 
-// Post creation endpoint
 app.post('/api/posts', async (req, res) => {
   const { imageUrl, caption, userId, mentions, hashtags } = req.body;
   const connection = await pool.getConnection();
@@ -252,83 +273,48 @@ app.post('/api/posts', async (req, res) => {
   }
 });
 
-// Add this endpoint to handle adding comments
 app.post('/api/posts/:postId/comments', async (req, res) => {
   const { postId } = req.params;
-  const { userId, text, mentions, hashtags } = req.body;
+  const { userId, text } = req.body;
   const connection = await pool.getConnection();
 
   try {
-    await connection.beginTransaction();
+    await connection.query(`
+      INSERT INTO Comment (post_id, user_id, text)
+      VALUES (?, ?, ?)
+    `, [postId, userId, text]);
 
-    const [userExists] = await connection.query(
-      'SELECT user_id FROM User WHERE user_id = ?',
-      [userId]
-    );
+    console.log('Inserted comment:', { postId, userId, text });
 
-    if (userExists.length === 0) {
-      throw new Error('User not found');
-    }
+    const [comments] = await connection.query(`
+      SELECT text FROM Comment WHERE post_id = ?
+    `, [postId]);
 
-    const [postExists] = await connection.query(
-      'SELECT post_id FROM Post WHERE post_id = ?',
-      [postId]
-    );
+    const allCommentsText = comments.map(comment => comment.text).join(' ');
+    const sentimentResult = await analyzeSentiment(allCommentsText);
+    const sentimentScore = (sentimentResult[0].label === 'POSITIVE' ? 1 : -1) * (sentimentResult[0].score * 5);
+    const sentimentLabel = sentimentResult[0].label;
 
-    if (postExists.length === 0) {
-      throw new Error('Post not found');
-    }
+    console.log('Sentiment analysis result:', { postId, sentimentScore, sentimentLabel });
 
-    const [commentResult] = await connection.query(
-      'INSERT INTO Comment (post_id, user_id, text) VALUES (?, ?, ?)',
-      [postId, userId, text]
-    );
+    await connection.query(`
+      INSERT INTO sentiment_analysis (post_id, scale, label)
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE scale = VALUES(scale), label = VALUES(label)
+    `, [postId, sentimentScore, sentimentLabel]);
 
-    const commentId = commentResult.insertId;
+    console.log('Inserted/Updated sentiment analysis:', { postId, sentimentScore, sentimentLabel });
 
-    if (hashtags?.length > 0) {
-      for (const tag of hashtags) {
-        const [hashtagResult] = await connection.query(
-          'INSERT INTO Hashtag (text) VALUES (?) ON DUPLICATE KEY UPDATE hashtag_id=LAST_INSERT_ID(hashtag_id)',
-          [tag.slice(1)]
-        );
-
-        await connection.query(
-          'INSERT INTO Comment_Hashtag (comment_id, hashtag_id) VALUES (?, ?)',
-          [commentId, hashtagResult.insertId]
-        );
-      }
-    }
-
-    if (mentions?.length > 0) {
-      for (const mention of mentions) {
-        const [mentionedUser] = await connection.query(
-          'SELECT user_id FROM User WHERE username = ?',
-          [mention.slice(1)]
-        );
-
-        if (mentionedUser.length > 0) {
-          await connection.query(
-            'INSERT INTO Comment_Mention (comment_id, user_id) VALUES (?, ?)',
-            [commentId, mentionedUser[0].user_id]
-          );
-        }
-      }
-    }
-
-    await connection.commit();
-    res.status(200).json({
+    res.status(201).json({
       success: true,
-      message: 'Comment added successfully',
-      commentId
+      sentimentScore,
+      sentimentLabel,
     });
-
   } catch (error) {
-    await connection.rollback();
-    console.error('Comment creation error:', error);
+    console.error('Error adding comment:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to add comment'
+      error: 'Failed to add comment',
     });
   } finally {
     connection.release();

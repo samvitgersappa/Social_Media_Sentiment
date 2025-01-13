@@ -7,10 +7,7 @@ interface SentimentSliderProps {
 }
 
 export function SentimentSlider({ score, className = '' }: SentimentSliderProps) {
-  // Ensure score is within -5 to 5 range
   const normalizedScore = Math.max(-5, Math.min(5, score));
-  
-  // Convert score from -5:5 to 0:100 for percentage
   const percentage = ((normalizedScore + 5) / 10) * 100;
 
   return (
@@ -30,7 +27,7 @@ export function SentimentSlider({ score, className = '' }: SentimentSliderProps)
         />
       </div>
       <div className="text-center text-sm text-gray-300">
-        Score: {normalizedScore.toFixed(1)}
+        Score: {normalizedScore.toFixed(2)}
       </div>
     </div>
   );

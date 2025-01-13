@@ -1,18 +1,28 @@
-// Dummy sentiment analysis function
-// In a real application, this would use a proper sentiment analysis library or API
-export function analyzeSentiment(text: string): number {
-  // This is a very simple example - replace with actual sentiment analysis
-  const positiveWords = ['good', 'great', 'awesome', 'amazing', 'beautiful', 'stunning', 'delicious'];
-  const negativeWords = ['bad', 'terrible', 'awful', 'horrible', 'poor', 'disappointing'];
-  
-  const words = text.toLowerCase().split(' ');
-  let score = 0;
-  
-  words.forEach(word => {
-    if (positiveWords.includes(word)) score += 1;
-    if (negativeWords.includes(word)) score -= 1;
-  });
-  
-  // Normalize score to -5 to 5 range
-  return Math.max(-5, Math.min(5, score));
+export type SentimentLabel = {
+  text: string;
+  type: 'positive' | 'negative' | 'neutral';
+};
+
+export function getSentimentLabels(score: number): SentimentLabel[] {
+  const labels: SentimentLabel[] = [];
+
+  if (score > 3) {
+    labels.push({ text: 'Encouraging', type: 'positive' });
+    labels.push({ text: 'Happy', type: 'positive' });
+  } else if (score > 1) {
+    labels.push({ text: 'Satisfactory', type: 'positive' });
+  }
+
+  if (score >= -1 && score <= 1) {
+    labels.push({ text: 'Neutral', type: 'neutral' });
+  }
+
+  if (score < -3) {
+    labels.push({ text: 'Discouraging', type: 'negative' });
+    labels.push({ text: 'Sad', type: 'negative' });
+  } else if (score < -1) {
+    labels.push({ text: 'Unsatisfactory', type: 'negative' });
+  }
+
+  return labels;
 }

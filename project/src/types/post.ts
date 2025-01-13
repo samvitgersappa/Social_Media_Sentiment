@@ -1,18 +1,18 @@
 export interface Post {
-  post_id: string;
+  post_id: number;
   username: string;
   userAvatar: string;
   imageUrl: string;
   caption: string;
-  hashtags: string[];
   likes: number;
+  hashtags: string[];
   comments: Comment[];
+  sentimentScore: number;
   timestamp: string;
-  sentimentScore?: number; // Make this optional to handle cases where it might be undefined
 }
 
 export interface Comment {
-  id: string;
+  id: number;
   username: string;
   text: string;
   timestamp: string;
