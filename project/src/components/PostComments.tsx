@@ -1,26 +1,31 @@
 import React from 'react';
 import type { Comment } from '../types/post';
-import { SentimentIndicator } from './SentimentIndicator';
-import { analyzeSentiment } from '../utils/sentiment';
 
 interface PostCommentsProps {
   comments: Comment[];
 }
 
 export function PostComments({ comments }: PostCommentsProps) {
+  if (!comments || comments.length === 0) {
+    return <div className="mt-4 text-gray-500">No comments yet.</div>;
+  }
+
   return (
-    <div className="mt-4 space-y-2">
+    <div className="mt-4">
       {comments.map((comment) => (
-        <div key={comment.id} className="flex items-center justify-between text-gray-300">
-          <div>
-            <span className="font-medium text-white">{comment.username}</span>{' '}
-            {comment.text}
-          </div>
-          <SentimentIndicator
-            score={analyzeSentiment(comment.text)}
-            size="sm"
-            className="ml-2"
+        <div key={comment.id} className="flex items-start gap-2 mb-2">
+          <img
+            src={`https://api.adorable.io/avatars/40/${comment.username}.png`}
+            alt={`${comment.username}'s avatar`}
+            className="w-8 h-8 rounded-full"
           />
+          <div>
+            <p className="text-white">
+              <span className="font-medium">{comment.username}</span>{' '}
+              {comment.text}
+            </p>
+            <p className="text-gray-500 text-sm">{comment.timestamp}</p>
+          </div>
         </div>
       ))}
     </div>

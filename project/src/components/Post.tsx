@@ -14,8 +14,45 @@ interface PostProps {
 
 export function Post({ post }: PostProps) {
   const [isLiked, setIsLiked] = useState(false);
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(true); // Show comments by default
+  const [imageError, setImageError] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [comments, setComments] = useState(post.comments || []);
   const sentimentLabels = getSentimentLabels(post.sentimentScore);
+
+  const handleAddComment = async () => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/posts/${post.post_id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: 1, // Replace with the actual user ID
+          text: commentText,
+          mentions: [], // Extract mentions from the comment text
+          hashtags: [], // Extract hashtags from the comment text
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update the post's comments state
+        setComments([...comments, {
+          id: data.commentId,
+          username: 'currentUsername', // Replace with the actual username
+          text: commentText,
+          timestamp: new Date().toISOString(),
+        }]);
+        setCommentText('');
+      } else {
+        console.error('Failed to add comment:', data.error);
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
 
   return (
     <div className="bg-gray-800 rounded-lg overflow-hidden mb-6 max-w-xl w-full">
@@ -25,11 +62,20 @@ export function Post({ post }: PostProps) {
         sentimentScore={post.sentimentScore}
       />
 
-      <img
-        src={post.imageUrl}
-        alt="Post content"
-        className="w-full aspect-square object-cover"
-      />
+      {post.imageUrl && !imageError && (
+        <img
+          src={post.imageUrl}
+          alt="Post content"
+          className="w-full aspect-square object-cover"
+          onError={() => setImageError(true)}
+        />
+      )}
+
+      {imageError && (
+        <div className="w-full aspect-square bg-gray-700 flex items-center justify-center">
+          <span className="text-white">Image not available</span>
+        </div>
+      )}
 
       <div className="p-4">
         <PostActions
@@ -47,14 +93,30 @@ export function Post({ post }: PostProps) {
           <span className="text-gray-300">{post.caption}</span>
         </p>
 
-        <Hashtags tags={post.hashtags} />
+        <Hashtags tags={post.hashtags || []} />
 
         <div className="mt-4">
           <SentimentSlider score={post.sentimentScore} />
           <SentimentLabels labels={sentimentLabels} />
         </div>
 
-        {showComments && <PostComments comments={post.comments} />}
+        {showComments && <PostComments comments={comments} />}
+
+        <div className="mt-4">
+          <input
+            type="text"
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            placeholder="Add a comment..."
+            className="w-full p-2 rounded bg-gray-700 text-white"
+          />
+          <button
+            onClick={handleAddComment}
+            className="mt-2 p-2 bg-blue-500 text-white rounded"
+          >
+            Post Comment
+          </button>
+        </div>
 
         <p className="text-gray-500 text-sm mt-2">{post.timestamp}</p>
       </div>

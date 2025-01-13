@@ -4,14 +4,15 @@ interface HashtagsProps {
   tags: string[];
 }
 
-export function Hashtags({ tags }: HashtagsProps) {
+export function Hashtags({ tags = [] }: HashtagsProps) {
+  if (tags.length === 0) {
+    return null;
+  }
+
   return (
-    <div className="flex flex-wrap gap-2 mt-2">
-      {tags.map((tag) => (
-        <span
-          key={tag}
-          className="text-blue-400 hover:text-blue-300 cursor-pointer text-sm"
-        >
+    <div className="mt-2">
+      {tags.map((tag, index) => (
+        <span key={index} className="text-blue-500 mr-2">
           #{tag}
         </span>
       ))}

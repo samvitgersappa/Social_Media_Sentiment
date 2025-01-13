@@ -1,36 +1,14 @@
 import React from 'react';
-import { getSentimentColor } from '../utils/colorScale';
 
 interface SentimentIndicatorProps {
-  score: number;
-  size?: 'sm' | 'md' | 'lg';
-  showScore?: boolean;
-  className?: string;
+  score?: number;
 }
 
-export function SentimentIndicator({
-  score,
-  size = 'md',
-  showScore = true,
-  className = ''
-}: SentimentIndicatorProps) {
-  const sizeClasses = {
-    sm: 'w-2 h-2',
-    md: 'w-3 h-3',
-    lg: 'w-4 h-4'
-  };
-
+export function SentimentIndicator({ score = 0 }: SentimentIndicatorProps) {
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <div
-        className={`${sizeClasses[size]} rounded-full`}
-        style={{ backgroundColor: getSentimentColor(score) }}
-      />
-      {showScore && (
-        <span className="text-sm text-gray-300">
-          {score.toFixed(1)}
-        </span>
-      )}
+    <div className="flex items-center gap-2">
+      <span className="text-white">{score.toFixed(2)}</span>
+      {/* Add any additional sentiment indicator UI here */}
     </div>
   );
 }

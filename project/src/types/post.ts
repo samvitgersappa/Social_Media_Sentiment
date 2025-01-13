@@ -1,5 +1,5 @@
 export interface Post {
-  id: string;
+  post_id: string;
   username: string;
   userAvatar: string;
   imageUrl: string;
@@ -8,7 +8,7 @@ export interface Post {
   likes: number;
   comments: Comment[];
   timestamp: string;
-  sentimentScore: number;
+  sentimentScore?: number; // Make this optional to handle cases where it might be undefined
 }
 
 export interface Comment {

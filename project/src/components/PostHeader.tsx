@@ -4,21 +4,21 @@ import { SentimentIndicator } from './SentimentIndicator';
 interface PostHeaderProps {
   username: string;
   userAvatar: string;
-  sentimentScore: number;
+  sentimentScore?: number;
 }
 
 export function PostHeader({ username, userAvatar, sentimentScore }: PostHeaderProps) {
   return (
-    <div className="flex items-center justify-between p-4">
-      <div className="flex items-center">
-        <img
-          src={userAvatar}
-          alt={username}
-          className="w-8 h-8 rounded-full object-cover"
-        />
-        <span className="ml-3 font-medium text-white">{username}</span>
+    <div className="flex items-center gap-4 p-4">
+      <img
+        src={userAvatar}
+        alt={`${username}'s avatar`}
+        className="w-10 h-10 rounded-full"
+      />
+      <div className="flex flex-col">
+        <span className="text-white font-medium">{username}</span>
+        <SentimentIndicator score={sentimentScore} />
       </div>
-      <SentimentIndicator score={sentimentScore} size="sm" />
     </div>
   );
 }
