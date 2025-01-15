@@ -19,7 +19,7 @@ const analyzeSentiment = (text) => {
   return new Promise((resolve, reject) => {
     const scriptPath = path.join(__dirname, '../model/analysis.py');
     const venvActivatePath = 'D:/Development/DBMS_EL/venv/Scripts/activate.bat';
-    const command = `cmd /c "call ${venvActivatePath} && python ${scriptPath} \\"${text}\\""`;
+    const command = `cmd /c "call ${venvActivatePath} && python ${scriptPath} "${text.replace(/"/g, '\\"')}"`;
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error('Sentiment analysis error:', error);
@@ -315,6 +315,34 @@ app.post('/api/posts/:postId/comments', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to add comment',
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+app.post('/api/posts/:postId/like', async (req, res) => {
+  const { postId } = req.params;
+  const { userId } = req.body;
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.query(`
+      INSERT INTO likes (post_id, user_id)
+      VALUES (?, ?)
+    `, [postId, userId]);
+
+    console.log('Inserted like:', { postId, userId });
+
+    res.status(201).json({
+      success: true,
+      message: 'Post liked successfully',
+    });
+  } catch (error) {
+    console.error('Error liking post:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to like post',
     });
   } finally {
     connection.release();

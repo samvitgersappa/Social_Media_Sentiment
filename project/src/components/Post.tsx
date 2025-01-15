@@ -57,6 +57,30 @@ export function Post({ post, onNewComment }: PostProps) {
     }
   };
 
+  const handleLikeClick = async () => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/posts/${post.post_id}/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: 1, // Replace with the actual user ID
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsLiked(!isLiked);
+      } else {
+        console.error('Failed to like post:', data.error);
+      }
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
+  };
+
   return (
     <div className="bg-gray-800 rounded-lg overflow-hidden mb-6 max-w-xl w-full">
       <PostHeader
@@ -83,7 +107,7 @@ export function Post({ post, onNewComment }: PostProps) {
       <div className="p-4">
         <PostActions
           isLiked={isLiked}
-          onLikeClick={() => setIsLiked(!isLiked)}
+          onLikeClick={handleLikeClick}
           onCommentClick={() => setShowComments(!showComments)}
         />
 
