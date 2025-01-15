@@ -7,6 +7,7 @@ import { Hashtags } from './Hashtags';
 import { SentimentSlider } from './SentimentSlider';
 import { SentimentLabels } from './SentimentLabels';
 import { getSentimentLabels } from '../utils/sentiment';
+import { getUserIdFromToken } from '../utils/auth'; // Import the utility function
 
 interface PostProps {
   post: PostType;
@@ -22,6 +23,12 @@ export function Post({ post, onNewComment }: PostProps) {
   const [sentimentLabels, setSentimentLabels] = useState(getSentimentLabels(post.sentimentScore));
 
   const handleAddComment = async () => {
+    const userId = getUserIdFromToken();
+    if (!userId) {
+      console.error('User not logged in');
+      return;
+    }
+
     try {
       const response = await fetch(`http://localhost:3000/api/posts/${post.post_id}/comments`, {
         method: 'POST',
@@ -29,7 +36,7 @@ export function Post({ post, onNewComment }: PostProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: 1, // Replace with the actual user ID
+          userId,
           text: commentText,
           mentions: [], // Extract mentions from the comment text
           hashtags: [], // Extract hashtags from the comment text
@@ -58,6 +65,12 @@ export function Post({ post, onNewComment }: PostProps) {
   };
 
   const handleLikeClick = async () => {
+    const userId = getUserIdFromToken();
+    if (!userId) {
+      console.error('User not logged in');
+      return;
+    }
+
     try {
       const response = await fetch(`http://localhost:3000/api/posts/${post.post_id}/like`, {
         method: 'POST',
@@ -65,7 +78,7 @@ export function Post({ post, onNewComment }: PostProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: 1, // Replace with the actual user ID
+          userId,
         }),
       });
 
