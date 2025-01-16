@@ -21,6 +21,7 @@ export function Post({ post, onNewComment }: PostProps) {
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState(post.comments || []);
   const [sentimentLabels, setSentimentLabels] = useState(getSentimentLabels(post.sentimentScore));
+  const [likeCount, setLikeCount] = useState(post.likeCount || 0); // Initialize like count
 
   const handleAddComment = async () => {
     const userId = getUserIdFromToken();
@@ -86,6 +87,7 @@ export function Post({ post, onNewComment }: PostProps) {
 
       if (data.success) {
         setIsLiked(!isLiked);
+        setLikeCount(likeCount + (isLiked ? -1 : 1)); // Update like count
       } else {
         console.error('Failed to like post:', data.error);
       }
@@ -125,7 +127,7 @@ export function Post({ post, onNewComment }: PostProps) {
         />
 
         <p className="text-white font-medium mt-2">
-          {post.likes + (isLiked ? 1 : 0)} likes
+          {likeCount} likes
         </p>
 
         <p className="text-white mt-2">
