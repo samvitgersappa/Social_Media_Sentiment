@@ -249,9 +249,12 @@ app.post('/api/posts', async (req, res) => {
 
         if (mentionedUser.length > 0) {
           await connection.query(
-            'INSERT INTO Post_Mention (post_id, user_id) VALUES (?, ?)',
+            'INSERT INTO Mention (post_id, user_id, created_at) VALUES (?, ?, NOW())',
             [postId, mentionedUser[0].user_id]
           );
+          console.log(`Mention added for user ${mentionedUser[0].user_id} in post ${postId}`);
+        } else {
+          console.log(`User ${mention.slice(1)} not found for mention`);
         }
       }
     }
@@ -281,17 +284,30 @@ app.post('/api/posts/:postId/comments', async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
-    await connection.query(`
-      INSERT INTO Comment (post_id, user_id, text)
-      VALUES (?, ?, ?)
-    `, [postId, userId, text]);
+    await connection.beginTransaction();
+
+    await connection.query(
+      'INSERT INTO Comment (post_id, user_id, text) VALUES (?, ?, ?)',
+      [postId, userId, text]
+    );
 
     console.log('Inserted comment:', { postId, userId, text });
 
-    const [comments] = await connection.query(`
-      SELECT text FROM Comment WHERE post_id = ?
-    `, [postId]);
+    const [comments] = await connection.query(
+      'SELECT c.comment_id AS id, c.post_id, c.text, c.created_at AS timestamp, u.username FROM Comment c JOIN User u ON c.user_id = u.user_id WHERE c.post_id = ? ORDER BY c.created_at ASC',
+      [postId]
+    );
 
+    await connection.commit();
+
+    // Return the updated comments list immediately
+    res.status(201).json({
+      success: true,
+      comments,
+      commentCount: comments.length
+    });
+
+    // Run sentiment analysis in the background
     const allCommentsText = comments.map(comment => comment.text).join(' ');
     const sentimentResult = await analyzeSentiment(allCommentsText);
     const sentimentScore = (sentimentResult[0].label === 'POSITIVE' ? 1 : -1) * (sentimentResult[0].score * 5);
@@ -299,20 +315,15 @@ app.post('/api/posts/:postId/comments', async (req, res) => {
 
     console.log('Sentiment analysis result:', { postId, sentimentScore, sentimentLabel });
 
-    await connection.query(`
-      INSERT INTO sentiment_analysis (post_id, scale, label)
-      VALUES (?, ?, ?)
-      ON DUPLICATE KEY UPDATE scale = VALUES(scale), label = VALUES(label)
-    `, [postId, sentimentScore, sentimentLabel]);
+    await connection.query(
+      'INSERT INTO sentiment_analysis (post_id, scale, label) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE scale = VALUES(scale), label = VALUES(label)',
+      [postId, sentimentScore, sentimentLabel]
+    );
 
     console.log('Inserted/Updated sentiment analysis:', { postId, sentimentScore, sentimentLabel });
 
-    res.status(201).json({
-      success: true,
-      sentimentScore,
-      sentimentLabel,
-    });
   } catch (error) {
+    await connection.rollback();
     console.error('Error adding comment:', error);
     res.status(500).json({
       success: false,
