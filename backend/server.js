@@ -328,22 +328,37 @@ app.post('/api/posts/:postId/like', async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
-    await connection.query(`
-      INSERT INTO likes (post_id, user_id)
-      VALUES (?, ?)
+    const [existingLike] = await connection.query(`
+      SELECT * FROM likes WHERE post_id = ? AND user_id = ?
     `, [postId, userId]);
 
-    console.log('Inserted like:', { postId, userId });
-
-    res.status(201).json({
-      success: true,
-      message: 'Post liked successfully',
-    });
+    if (existingLike.length > 0) {
+      await connection.query(`
+        DELETE FROM likes WHERE post_id = ? AND user_id = ?
+      `, [postId, userId]);
+      console.log('Removed like:', { postId, userId });
+      res.status(200).json({
+        success: true,
+        message: 'Post unliked successfully',
+        action: 'unliked'
+      });
+    } else {
+      await connection.query(`
+        INSERT INTO likes (post_id, user_id)
+        VALUES (?, ?)
+      `, [postId, userId]);
+      console.log('Inserted like:', { postId, userId });
+      res.status(201).json({
+        success: true,
+        message: 'Post liked successfully',
+        action: 'liked'
+      });
+    }
   } catch (error) {
-    console.error('Error liking post:', error);
+    console.error('Error toggling like:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to like post',
+      error: 'Failed to toggle like',
     });
   } finally {
     connection.release();

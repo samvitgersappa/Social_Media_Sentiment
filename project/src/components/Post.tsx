@@ -87,12 +87,12 @@ export function Post({ post, onNewComment }: PostProps) {
 
       if (data.success) {
         setIsLiked(!isLiked);
-        setLikeCount(likeCount + (isLiked ? -1 : 1)); // Update like count
+        setLikeCount(likeCount + (data.action === 'liked' ? 1 : -1)); // Update like count
       } else {
-        console.error('Failed to like post:', data.error);
+        console.error('Failed to toggle like:', data.error);
       }
     } catch (error) {
-      console.error('Error liking post:', error);
+      console.error('Error toggling like:', error);
     }
   };
 
