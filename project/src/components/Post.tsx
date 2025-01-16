@@ -7,7 +7,7 @@ import { Hashtags } from './Hashtags';
 import { SentimentSlider } from './SentimentSlider';
 import { SentimentLabels } from './SentimentLabels';
 import { getSentimentLabels } from '../utils/sentiment';
-import { getUserIdFromToken } from '../utils/auth'; // Import the utility function
+import { getUserIdFromToken, getUsernameFromToken } from '../utils/auth';
 
 interface PostProps {
   post: PostType;
@@ -16,16 +16,17 @@ interface PostProps {
 
 export function Post({ post, onNewComment }: PostProps) {
   const [isLiked, setIsLiked] = useState(false);
-  const [showComments, setShowComments] = useState(true); // Show comments by default
+  const [showComments, setShowComments] = useState(false); // Hide comments by default
   const [imageError, setImageError] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState(post.comments || []);
   const [sentimentLabels, setSentimentLabels] = useState(getSentimentLabels(post.sentimentScore));
-  const [likeCount, setLikeCount] = useState(post.likeCount || 0); // Initialize like count
-  const [commentCount, setCommentCount] = useState(post.commentCount || 0); // Initialize comment count
+  const [likeCount, setLikeCount] = useState(post.likeCount || 0);
+  const [commentCount, setCommentCount] = useState(post.commentCount || 0);
 
   const handleAddComment = async () => {
     const userId = getUserIdFromToken();
+    const username = getUsernameFromToken();
     if (!userId) {
       console.error('User not logged in');
       return;
@@ -40,8 +41,8 @@ export function Post({ post, onNewComment }: PostProps) {
         body: JSON.stringify({
           userId,
           text: commentText,
-          mentions: [], // Extract mentions from the comment text
-          hashtags: [], // Extract hashtags from the comment text
+          mentions: [],
+          hashtags: [],
         }),
       });
 
@@ -50,7 +51,7 @@ export function Post({ post, onNewComment }: PostProps) {
       if (data.success) {
         const newComment = {
           id: data.commentId,
-          username: 'currentUsername', // Replace with the actual username
+          username,
           text: commentText,
           timestamp: new Date().toISOString(),
         };
@@ -58,8 +59,7 @@ export function Post({ post, onNewComment }: PostProps) {
         onNewComment(post.post_id, newComment);
         setCommentText('');
         setSentimentLabels(getSentimentLabels(data.sentimentScore));
-        setCommentCount(commentCount + 1); // Update comment count
-        window.location.reload(); // Refresh the page
+        setCommentCount(commentCount + 1);
       } else {
         console.error('Failed to add comment:', data.error);
       }
@@ -90,7 +90,7 @@ export function Post({ post, onNewComment }: PostProps) {
 
       if (data.success) {
         setIsLiked(!isLiked);
-        setLikeCount(likeCount + (data.action === 'liked' ? 1 : -1)); // Update like count
+        setLikeCount(likeCount + (data.action === 'liked' ? 1 : -1));
       } else {
         console.error('Failed to toggle like:', data.error);
       }

@@ -20,10 +20,8 @@ export function PostComments({ comments }: PostCommentsProps) {
             className="w-8 h-8 rounded-full"
           />
           <div>
-            <p className="text-white">
-              <span className="font-medium">{comment.username}</span>{' '}
-              {comment.text}
-            </p>
+            <p className="text-white font-medium">{comment.username}</p>
+            <p className="text-gray-300">{comment.text}</p>
             <p className="text-gray-500 text-sm">{comment.timestamp}</p>
           </div>
         </div>

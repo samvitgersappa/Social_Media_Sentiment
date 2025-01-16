@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Post } from '../components/Post';
 import { UserVibe } from '../components/UserVibe';
 import { SuggestedProfiles } from '../components/SuggestedProfiles';
@@ -13,6 +14,7 @@ export function FeedPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -37,6 +39,12 @@ export function FeedPage() {
 
   const overallSentiment = posts.reduce((acc, post) => acc + post.sentimentScore, 0) / posts.length;
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    navigate('/login');
+  };
+
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Header */}
@@ -46,6 +54,12 @@ export function FeedPage() {
             <Layout className="w-6 h-6 text-white" />
             <h1 className="text-xl font-bold text-white">SocialFeed</h1>
           </div>
+          <button
+            onClick={handleLogout}
+            className="text-white hover:text-gray-300 transition-colors"
+          >
+            Logout
+          </button>
         </div>
       </header>
 
