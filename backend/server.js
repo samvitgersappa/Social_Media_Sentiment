@@ -55,7 +55,8 @@ app.get('/api/posts', async (req, res) => {
   try {
     const [posts] = await connection.query(`
       SELECT p.post_id, p.content AS caption, p.image_url AS imageUrl, u.username, u.name, u.email, sa.scale AS sentimentScore, sa.label AS sentimentLabel,
-             (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.post_id) AS likeCount
+             (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.post_id) AS likeCount,
+             (SELECT COUNT(*) FROM Comment c WHERE c.post_id = p.post_id) AS commentCount
       FROM Post p
       JOIN User u ON p.p_user_id = u.user_id
       LEFT JOIN sentiment_analysis sa ON p.post_id = sa.post_id

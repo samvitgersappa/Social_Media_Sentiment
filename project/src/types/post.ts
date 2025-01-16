@@ -9,6 +9,7 @@ export interface Post {
   comments: Comment[];
   sentimentScore: number;
   timestamp: string;
+  commentCount: number; // Add this line
 }
 
 export interface Comment {

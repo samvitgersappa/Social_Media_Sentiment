@@ -22,6 +22,7 @@ export function Post({ post, onNewComment }: PostProps) {
   const [comments, setComments] = useState(post.comments || []);
   const [sentimentLabels, setSentimentLabels] = useState(getSentimentLabels(post.sentimentScore));
   const [likeCount, setLikeCount] = useState(post.likeCount || 0); // Initialize like count
+  const [commentCount, setCommentCount] = useState(post.commentCount || 0); // Initialize comment count
 
   const handleAddComment = async () => {
     const userId = getUserIdFromToken();
@@ -57,6 +58,8 @@ export function Post({ post, onNewComment }: PostProps) {
         onNewComment(post.post_id, newComment);
         setCommentText('');
         setSentimentLabels(getSentimentLabels(data.sentimentScore));
+        setCommentCount(commentCount + 1); // Update comment count
+        window.location.reload(); // Refresh the page
       } else {
         console.error('Failed to add comment:', data.error);
       }
@@ -128,6 +131,10 @@ export function Post({ post, onNewComment }: PostProps) {
 
         <p className="text-white font-medium mt-2">
           {likeCount} likes
+        </p>
+
+        <p className="text-white font-medium mt-2">
+          {commentCount} comments
         </p>
 
         <p className="text-white mt-2">
