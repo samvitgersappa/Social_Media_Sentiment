@@ -7,6 +7,16 @@ import { exec } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import neo4j from 'neo4j-driver';
+
+const NEO4J_URI = 'bolt://localhost:7687'; // Update to your Neo4j URI
+const NEO4J_USERNAME = 'neo4j'; // Your Neo4j username
+const NEO4J_PASSWORD = '12345678'; // Your Neo4j password
+
+const driver = neo4j.driver(
+  NEO4J_URI,
+  neo4j.auth.basic(NEO4J_USERNAME, NEO4J_PASSWORD)
+);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -176,6 +186,21 @@ app.post('/api/auth/signup', async (req, res) => {
       [email, hashedPassword, name, username, dob, age]
     );
 
+    const session = driver.session({ database: 'neo4j' }); // Specify the database name
+    await session.run(
+      `
+      CREATE (u:User {id: $id, email: $email, name: $name, username: $username, dob: $dob, age: $age})
+      `,
+      {
+        id: result.insertId,
+        email,
+        name,
+        username,
+        dob,
+        age,
+      }
+    );
+
     const token = jwt.sign(
       { userId: result.insertId, email },
       JWT_SECRET,
@@ -257,6 +282,19 @@ app.post('/api/posts', async (req, res) => {
           console.log(`User ${mention.slice(1)} not found for mention`);
         }
       }
+    }
+
+    // Neo4j: Assign hashtags to the user's node
+    const session = driver.session({ database: 'neo4j' });
+    for (const tag of hashtags) {
+      await session.run(
+        `
+        MATCH (u:User {id: $userId})
+        MERGE (h:Hashtag {text: $tag})
+        MERGE (u)-[:USES]->(h)
+        `,
+        { userId, tag: tag.slice(1) }
+      );
     }
 
     await connection.commit();
@@ -365,6 +403,23 @@ app.post('/api/posts/:postId/like', async (req, res) => {
         message: 'Post liked successfully',
         action: 'liked'
       });
+
+      // Neo4j: Create a relationship between the user who liked and the user who made the post
+      const session = driver.session({ database: 'neo4j' });
+      const result = await connection.query(`
+        SELECT p.p_user_id FROM Post p WHERE p.post_id = ?
+      `, [postId]);
+      const postOwnerId = result[0][0].p_user_id;
+
+      await session.run(
+        `
+        MATCH (u1:User {id: $userId})
+        MATCH (u2:User {id: $postOwnerId})
+        MERGE (u1)-[:LIKES]->(:Post {id: $postId})
+        MERGE (u1)-[:LIKES_POST_OF]->(u2)
+        `,
+        { userId, postId, postOwnerId }
+      );
     }
   } catch (error) {
     console.error('Error toggling like:', error);
