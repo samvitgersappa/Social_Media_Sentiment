@@ -345,10 +345,11 @@ app.post('/api/posts/:postId/comments', async (req, res) => {
       commentCount: comments.length
     });
 
-    // Run sentiment analysis in the background
+    // Concatenate all comments text
     const allCommentsText = comments.map(comment => comment.text).join(' ');
+    // Run sentiment analysis in the background
     const sentimentResult = await analyzeSentiment(allCommentsText);
-    const sentimentScore = (sentimentResult[0].label === 'POSITIVE' ? 1 : -1) * (sentimentResult[0].score * 5);
+    const sentimentScore = sentimentResult[0].score * 5; // Ensure score is between -5 and 5
     const sentimentLabel = sentimentResult[0].label;
 
     console.log('Sentiment analysis result:', { postId, sentimentScore, sentimentLabel });
