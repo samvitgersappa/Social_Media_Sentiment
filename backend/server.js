@@ -504,6 +504,45 @@ app.post('/api/follow', async (req, res) => {
   }
 });
 
+app.get('/api/follow-status', async (req, res) => {
+  const { userId, followUserId } = req.query;
+
+  try {
+    const session = driver.session({ database: 'neo4j' });
+
+    const result = await session.run(
+      'MATCH (u1:User {id: $userId})-[:FOLLOWS]->(u2:User {id: $followUserId}) RETURN u1',
+      { userId: parseInt(userId, 10), followUserId: parseInt(followUserId, 10) }
+    );
+
+    const follows = result.records.length > 0;
+
+    res.status(200).json({ success: true, follows });
+  } catch (error) {
+    console.error('Error checking follow status:', error);
+    res.status(500).json({ success: false, error: 'Failed to check follow status' });
+  }
+});
+
+app.post('/api/unfollow', async (req, res) => {
+  const { userId, followUserId } = req.body;
+
+  try {
+    const session = driver.session({ database: 'neo4j' });
+
+    // Remove the FOLLOWS relationship
+    await session.run(
+      'MATCH (u1:User {id: $userId})-[r:FOLLOWS]->(u2:User {id: $followUserId}) DELETE r',
+      { userId: parseInt(userId, 10), followUserId: parseInt(followUserId, 10) }
+    );
+
+    res.status(200).json({ success: true, message: 'Unfollowed successfully' });
+  } catch (error) {
+    console.error('Error unfollowing user:', error);
+    res.status(500).json({ success: false, error: 'Failed to unfollow user' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
