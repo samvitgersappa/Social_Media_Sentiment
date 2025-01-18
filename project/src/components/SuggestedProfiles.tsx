@@ -7,6 +7,33 @@ interface SuggestedProfilesProps {
 }
 
 export function SuggestedProfiles({ profiles }: SuggestedProfilesProps) {
+  const handleFollow = async (followUserId: number) => {
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      console.error('User not logged in');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3000/api/follow', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId, followUserId }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        console.log('Followed successfully');
+      } else {
+        console.error('Failed to follow user:', data.error);
+      }
+    } catch (error) {
+      console.error('Error following user:', error);
+    }
+  };
+
   return (
     <div className="bg-gray-800 rounded-lg p-4 mb-6">
       <h2 className="text-white font-semibold mb-4">Suggested Photographers</h2>
@@ -35,7 +62,10 @@ export function SuggestedProfiles({ profiles }: SuggestedProfilesProps) {
               <span className="text-blue-400 text-sm">
                 {profile.matchingVibes} matching vibes
               </span>
-              <button className="text-white hover:text-blue-400 transition-colors">
+              <button
+                className="text-white hover:text-blue-400 transition-colors"
+                onClick={() => handleFollow(profile.id)}
+              >
                 <UserPlus className="w-5 h-5" />
               </button>
             </div>

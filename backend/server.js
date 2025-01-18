@@ -485,6 +485,25 @@ app.get('/api/suggested-profiles', async (req, res) => {
   }
 });
 
+app.post('/api/follow', async (req, res) => {
+  const { userId, followUserId } = req.body;
+
+  try {
+    const session = driver.session({ database: 'neo4j' });
+
+    // Create the FOLLOWS relationship
+    await session.run(
+      'MATCH (u1:User {id: $userId}), (u2:User {id: $followUserId}) MERGE (u1)-[:FOLLOWS]->(u2)',
+      { userId: parseInt(userId, 10), followUserId: parseInt(followUserId, 10) }
+    );
+
+    res.status(200).json({ success: true, message: 'Followed successfully' });
+  } catch (error) {
+    console.error('Error following user:', error);
+    res.status(500).json({ success: false, error: 'Failed to follow user' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
