@@ -420,22 +420,42 @@ app.post('/api/posts/:postId/like', async (req, res) => {
         action: 'liked'
       });
 
-      // Neo4j: Create a relationship between the user who liked and the user who made the post
-      const session = driver.session({ database: 'neo4j' });
-      const result = await connection.query(`
-        SELECT p.p_user_id FROM Post p WHERE p.post_id = ?
+      const [hashtags] = await connection.query(`
+        SELECT text 
+        FROM post_hashtag 
+        JOIN hashtag ON post_hashtag.hashtag_id = hashtag.hashtag_id
+        WHERE post_id = ?
       `, [postId]);
-      const postOwnerId = result[0][0].p_user_id;
 
-      await session.run(
-        `
-        MATCH (u1:User {id: $userId})
-        MATCH (u2:User {id: $postOwnerId})
-        MERGE (u1)-[:LIKES]->(:Post {id: $postId})
-        MERGE (u1)-[:LIKES_POST_OF]->(u2)
-        `,
-        { userId, postId, postOwnerId }
-      );
+      const incrementFields = {
+        food: 0,
+        cars: 0,
+        nature: 0,
+        photography: 0
+      };
+
+      hashtags.forEach(({ text }) => {
+        if (incrementFields.hasOwnProperty(text)) {
+          incrementFields[text]++;
+        }
+      });
+
+      const session = driver.session({ database: 'neo4j' });
+      await session.run(`
+        MATCH (u:User {id: $userId})
+        SET u.food = u.food + $food,
+            u.cars = u.cars + $cars,
+            u.nature = u.nature + $nature,
+            u.photography = u.photography + $photography
+      `, {
+        userId: parseInt(userId, 10),
+        food: incrementFields.food,
+        cars: incrementFields.cars,
+        nature: incrementFields.nature,
+        photography: incrementFields.photography
+      });
+
+      session.close();
     }
   } catch (error) {
     console.error('Error toggling like:', error);
