@@ -189,7 +189,18 @@ app.post('/api/auth/signup', async (req, res) => {
     const session = driver.session({ database: 'neo4j' }); // Specify the database name
     await session.run(
       `
-      CREATE (u:User {id: $id, email: $email, name: $name, username: $username, dob: $dob, age: $age})
+      CREATE (u:User {
+        id: $id, 
+        email: $email, 
+        name: $name, 
+        username: $username, 
+        dob: $dob, 
+        age: $age,
+        nature: 7,
+        cars: 0,
+        photography: 3,
+        food: 1
+      })
       `,
       {
         id: result.insertId,
@@ -345,21 +356,25 @@ app.post('/api/posts/:postId/comments', async (req, res) => {
       commentCount: comments.length
     });
 
-    // Concatenate all comments text
-    const allCommentsText = comments.map(comment => comment.text).join(' ');
-    // Run sentiment analysis in the background
-    const sentimentResult = await analyzeSentiment(allCommentsText);
-    const sentimentScore = sentimentResult[0].score * 5; // Ensure score is between -5 and 5
-    const sentimentLabel = sentimentResult[0].label;
+    // Analyze each comment individually and aggregate the results
+    let totalScore = 0;
+    for (const comment of comments) {
+      const sentimentResult = await analyzeSentiment(comment.text);
+      const sentimentScore = sentimentResult[0].score * 5; // Ensure score is between -5 and 5
+      totalScore += sentimentScore;
+    }
 
-    console.log('Sentiment analysis result:', { postId, sentimentScore, sentimentLabel });
+    const averageScore = totalScore / comments.length;
+    const sentimentLabel = averageScore > 1 ? 'POSITIVE' : averageScore < -1 ? 'NEGATIVE' : 'NEUTRAL';
+
+    console.log('Sentiment analysis result:', { postId, sentimentScore: averageScore, sentimentLabel });
 
     await connection.query(
       'INSERT INTO sentiment_analysis (post_id, scale, label) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE scale = VALUES(scale), label = VALUES(label)',
-      [postId, sentimentScore, sentimentLabel]
+      [postId, averageScore, sentimentLabel]
     );
 
-    console.log('Inserted/Updated sentiment analysis:', { postId, sentimentScore, sentimentLabel });
+    console.log('Inserted/Updated sentiment analysis:', { postId, sentimentScore: averageScore, sentimentLabel });
 
   } catch (error) {
     await connection.rollback();
