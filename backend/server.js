@@ -196,10 +196,10 @@ app.post('/api/auth/signup', async (req, res) => {
         username: $username, 
         dob: $dob, 
         age: $age,
-        nature: 7,
+        nature: 0,
         cars: 0,
-        photography: 3,
-        food: 1
+        photography: 0,
+        food: 0
       })
       `,
       {
@@ -293,19 +293,6 @@ app.post('/api/posts', async (req, res) => {
           console.log(`User ${mention.slice(1)} not found for mention`);
         }
       }
-    }
-
-    // Neo4j: Assign hashtags to the user's node
-    const session = driver.session({ database: 'neo4j' });
-    for (const tag of hashtags) {
-      await session.run(
-        `
-        MATCH (u:User {id: $userId})
-        MERGE (h:Hashtag {text: $tag})
-        MERGE (u)-[:USES]->(h)
-        `,
-        { userId, tag: tag.slice(1) }
-      );
     }
 
     await connection.commit();
