@@ -448,6 +448,43 @@ app.post('/api/posts/:postId/like', async (req, res) => {
   }
 });
 
+app.get('/api/suggested-profiles', async (req, res) => {
+  const { userId } = req.query;
+
+  try {
+    const session = driver.session({ database: 'neo4j' });
+
+    // Fetch the cluster2Id of the current user
+    const userClusterResult = await session.run(
+      'MATCH (u:User {id: $userId}) RETURN u.cluster2Id AS cluster2Id',
+      { userId: parseInt(userId, 10) }
+    );
+
+    if (userClusterResult.records.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const cluster2Id = userClusterResult.records[0].get('cluster2Id');
+    console.log('Cluster2 ID:', cluster2Id);
+
+    // Fetch users with the same cluster2Id, excluding the current user
+    const result = await session.run(
+      'MATCH (u:User) WHERE u.cluster2Id = $cluster2Id AND u.id <> $userId RETURN u.id AS id, u.name AS username',
+      { cluster2Id, userId: parseInt(userId, 10) }
+    );
+
+    const profiles = result.records.map(record => ({
+      id: record.get('id'),
+      username: record.get('username'),
+    }));
+
+    res.status(200).json({ success: true, profiles });
+  } catch (error) {
+    console.error('Error fetching suggested profiles:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch suggested profiles' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

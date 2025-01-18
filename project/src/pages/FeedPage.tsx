@@ -7,12 +7,13 @@ import { SuggestedProfiles } from '../components/SuggestedProfiles';
 import { CreatePostButton } from '../components/CreatePost/CreatePostButton';
 import { CreatePostModal } from '../components/CreatePost/CreatePostModal';
 import { userInterests } from '../data/posts';
-import { suggestedProfiles } from '../data/profiles';
 import type { Post as PostType } from '../types/post';
+import type { Profile } from '../types/profile';
 
 export function FeedPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [posts, setPosts] = useState<PostType[]>([]);
+  const [suggestedProfiles, setSuggestedProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -34,7 +35,28 @@ export function FeedPage() {
       }
     };
 
+    const fetchSuggestedProfiles = async () => {
+      try {
+        const userId = localStorage.getItem('userId');
+        if (!userId) {
+          throw new Error('User not logged in');
+        }
+
+        const response = await fetch(`http://localhost:3000/api/suggested-profiles?userId=${userId}`);
+        const data = await response.json();
+
+        if (data.success) {
+          setSuggestedProfiles(data.profiles);
+        } else {
+          console.error('Failed to fetch suggested profiles:', data.error);
+        }
+      } catch (error) {
+        console.error('Error fetching suggested profiles:', error);
+      }
+    };
+
     fetchPosts();
+    fetchSuggestedProfiles();
   }, []);
 
   const overallSentiment = posts.reduce((acc, post) => acc + post.sentimentScore, 0) / posts.length;
